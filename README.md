@@ -31,21 +31,23 @@ This project decouples Claude Code from a local machine by running it on a dedic
 ## Architecture
 
 ```
-Proxmox Host
-└── LXC 200: claude-code (Ubuntu 24.04)
-    ├── Claude Code (authenticated with Max subscription)
-    ├── Happy Coder CLI (session relay to phone/mac)
-    ├── tmux (session persistence)
-    ├── Tailscale (encrypted P2P mesh networking)
-    ├── Git repos (cloned from GitHub)
-    └── Node.js 22.x runtime
+Proxmox Host (beelink)
+└── LXC 200: claude-code (Ubuntu 24.04, 4c/8GB/32GB)
+    ├── Claude Code 2.1.37 (Max subscription)
+    ├── Happy Coder 0.13.0 (session relay)
+    ├── tmux 3.4 (session persistence, mobile-friendly)
+    ├── Tailscale (100.103.193.111, SSH enabled)
+    ├── Node.js 22.22.0
+    ├── 1Password CLI (service account, CC Shared Credentials vault)
+    ├── MCP servers (Firecrawl, Home Assistant, Google Workspace, Salesforce)
+    ├── Plugins (superpowers, episodic-memory, context7, github, + 18 more)
+    └── 10 Git repos (~/projects/personal/)
 
 Access paths:
+  MacBook → ssh cc           → Tailscale → tmux → Claude Code
+  MacBook → ssh cc-raw       → Tailscale → plain shell
   iPhone  → Happy Coder app  → relay → LXC
   iPhone  → Blink Shell/Mosh → Tailscale → LXC
-  MacBook → Happy Coder Mac  → relay → LXC
-  MacBook → Ghostty SSH      → Tailscale → LXC
-  Browser → Happy Coder web  → relay → LXC
 ```
 
 ## Features
@@ -157,9 +159,14 @@ cc-remote-workspace/
 ├── LICENSE                    # MIT License
 ├── scripts/
 │   ├── setup-lxc.sh           # Phase 1: Proxmox LXC creation (runs on host)
+│   ├── provision.sh           # Phase 2: Base packages, Node.js, Tailscale (runs in LXC)
+│   ├── configure-user.sh      # Phase 3: User, tmux, shell config (runs in LXC)
+│   ├── install-claude.sh      # Phase 4: Claude Code + Happy Coder (runs in LXC)
 │   └── setup-macbook.sh       # Phase 6: MacBook thin-client setup (runs on Mac)
 └── config/
-    └── ssh-config             # SSH config snippet for 'ssh cc' access
+    ├── ssh-config             # SSH config snippet for 'ssh cc' access
+    ├── tmux.conf              # Mobile-friendly tmux configuration
+    └── bashrc-additions.sh    # Shell aliases and auto-tmux wrappers
 ```
 
 ## Configuration
@@ -192,11 +199,11 @@ Both resolve `claude-code` via Tailscale DNS.
 See [ROADMAP.md](ROADMAP.md) for the full 8-phase migration plan:
 
 - [x] **Phase 1** — Create LXC container on Proxmox
-- [ ] **Phase 2** — Provision base packages (Node.js, Tailscale, tmux)
-- [ ] **Phase 3** — Create user and shell configuration
-- [ ] **Phase 4** — Install Claude Code and Happy Coder
-- [ ] **Phase 5** — Migrate Git repos and Claude config
-- [x] **Phase 6** — Configure MacBook as thin client
+- [x] **Phase 2** — Provision base packages (Node.js 22, Tailscale, tmux, gh)
+- [x] **Phase 3** — Create user and shell configuration
+- [x] **Phase 4** — Install Claude Code and Happy Coder
+- [x] **Phase 5** — Migrate Git repos, Claude config, MCP servers, 1Password
+- [x] **Phase 6** — Configure MacBook as thin client (SSH config done)
 - [ ] **Phase 7** — Configure iPhone access
 - [ ] **Phase 8** — Cutover and cleanup
 

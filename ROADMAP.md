@@ -13,7 +13,8 @@ Before implementing any phase:
 
 ## Phase 1: Create LXC Container on Proxmox
 
-**Status**: [ ] Not started
+**Status**: [x] Complete (2026-02-08)
+**Snapshot**: `phase1-lxc-created`
 **Runs on**: Proxmox host
 
 ### Task
@@ -54,7 +55,8 @@ Create `scripts/setup-lxc.sh` that provisions the LXC container on Proxmox.
 
 ## Phase 2: Provision Base Packages
 
-**Status**: [ ] Not started
+**Status**: [x] Complete (2026-02-08)
+**Snapshot**: `phase2-provisioned`
 **Runs on**: Inside LXC container
 
 ### Task
@@ -90,7 +92,8 @@ Install in order:
 
 ## Phase 3: Create User and Shell Configuration
 
-**Status**: [ ] Not started
+**Status**: [x] Complete (2026-02-08)
+**Snapshot**: `phase3-user-configured`
 **Runs on**: Inside LXC container
 
 ### Task
@@ -137,7 +140,8 @@ Create `scripts/configure-user.sh` and config files for the robin user account.
 
 ## Phase 4: Install Claude Code and Happy Coder
 
-**Status**: [ ] Not started
+**Status**: [x] Complete (2026-02-08)
+**Snapshot**: `phase4-claude-installed`
 **Runs on**: Inside LXC container (as robin user)
 
 ### Task
@@ -174,7 +178,8 @@ Create `scripts/install-claude.sh` that installs and authenticates Claude Code a
 
 ## Phase 5: Migrate Git Repos and Claude Config
 
-**Status**: [ ] Not started
+**Status**: [x] Complete (2026-02-08)
+**Snapshot**: `phase5-config-synced`
 **Runs on**: Inside LXC container (as robin user) + MacBook
 
 ### Task
@@ -225,7 +230,7 @@ Create `scripts/migrate-repos.sh` and `scripts/migrate-config.sh` to transfer pr
 
 ## Phase 6: Configure MacBook as Thin Client
 
-**Status**: [ ] Not started
+**Status**: [~] Partially complete (SSH config added, aliases/script pending)
 **Runs on**: MacBook
 
 ### Task
