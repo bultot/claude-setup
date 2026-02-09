@@ -1,6 +1,6 @@
-# CC Remote Workspace
+# Claude Setup
 
-> Run Claude Code as an always-on service on a Proxmox LXC — accessible from MacBook, iPhone, or browser via SSH/Zellij and Happy Coder over Tailscale.
+> My personal way of working with Claude Code — always-on, multi-device, session-persistent.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Proxmox](https://img.shields.io/badge/Platform-Proxmox%20VE-orange.svg)](https://www.proxmox.com/)
@@ -9,205 +9,202 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
+- [Why This Exists](#why-this-exists)
+- [How I Work With Claude](#how-i-work-with-claude)
+- [When to Use What](#when-to-use-what)
 - [Architecture](#architecture)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
+- [Best Practices](#best-practices)
+- [Daily Commands](#daily-commands)
+- [Setup Guide](#setup-guide)
 - [Project Structure](#project-structure)
-- [Configuration](#configuration)
-- [Roadmap](#roadmap)
 - [License](#license)
 
-## Overview
+## Why This Exists
 
-This project decouples Claude Code from a local machine by running it on a dedicated Proxmox LXC container. The container is always on, persistent, and accessible from any device through multiple access paths. No more losing sessions when you close your laptop.
+Claude Code sessions are tied to your terminal. Close the lid, lose the session. Switch devices, start over. I wanted something better:
 
-**The problem:** Claude Code sessions are tied to your terminal. Close the lid, lose the session. Switch devices, start over.
+- **Start a session on my MacBook, continue on my iPhone** while walking the dog
+- **Close the laptop, reopen hours later** — pick up exactly where I left off
+- **Never lose work** because of a network hiccup or a battery dying
+- **Same tools, same prompt, same config** everywhere
 
-**The solution:** Run Claude Code on a headless server with Zellij for session persistence and OSC 52 clipboard. Access it from anywhere via SSH (MacBook), Happy Coder (iPhone), or the web client.
+The solution: Claude Code runs on a dedicated server (Proxmox LXC), always on, always reachable. My MacBook and iPhone are just thin clients that connect to it.
+
+## How I Work With Claude
+
+### The Daily Flow
+
+1. **Open terminal on MacBook** — the welcome dashboard shows project status, usage stats, and a suggestion for what to work on next
+2. **`cc`** — one command drops me into the LXC via SSH + Zellij
+3. **Work normally** — Claude Code runs on the server, tools and repos are all there
+4. **Close the lid** — session stays alive on the server
+5. **Open again** — `cc` reconnects to the exact same session
+6. **Switch to iPhone** — Happy Coder app connects to the same Claude Code instance
+7. **Back to MacBook** — `cc` picks up where the phone left off
+
+### Config Stays in Sync
+
+My Claude config (CLAUDE.md, custom commands, hooks) is synced in real-time between MacBook and LXC via [Syncthing](https://syncthing.net/). Edit a command on one machine, it appears on the other within seconds. The shell prompt (Starship), aliases, and dashboard are all shared too.
+
+### The Welcome Dashboard
+
+Every new shell shows a contextual dashboard:
+
+- **MacBook**: Full dashboard with project activity, token usage, suggested next project, and LXC commands
+- **LXC**: Lightweight banner with active Zellij sessions and local commands
+
+The dashboard reads pre-rendered cache files so it loads in <50ms — no delay when opening a terminal.
+
+## When to Use What
+
+| Scenario | Where | Why |
+|---|---|---|
+| **Deep coding session** | LXC (via `cc`) | Persistent session, full tools, won't lose work |
+| **Quick file edit** | Either | Both have the same repos and config |
+| **On the go / iPhone** | LXC (via Happy Coder) | Phone connects to the always-on server |
+| **Local macOS tools needed** | MacBook directly | Xcode, Simulator, macOS-only MCP servers |
+| **Pair programming / screen share** | MacBook directly | Screen sharing works better locally |
+| **Reviewing PRs / reading code** | Either | Both have `gh` CLI and git |
+
+### Rule of Thumb
+
+**Use the LXC for anything that takes more than 5 minutes.** If a session might be interrupted (closing the lid, switching devices, lunch break), run it on the LXC. The session survives anything short of a power outage.
+
+**Use the MacBook directly** only when you need macOS-specific tools or are sharing your screen.
 
 ## Architecture
 
 ```
-Proxmox Host (beelink)
+Proxmox Host (home server)
 └── LXC 200: claude-code (Ubuntu 24.04, 4c/8GB/32GB)
-    ├── Claude Code 2.1.37 (Max subscription)
-    ├── Happy Coder 0.13.0 (session relay)
-    ├── Zellij 0.43.1 (session persistence, OSC 52 clipboard)
-    ├── Tailscale (100.103.193.111, SSH enabled)
-    ├── Node.js 22.22.0
-    ├── 1Password CLI (service account, CC Shared Credentials vault)
-    ├── MCP servers (Firecrawl, Home Assistant, Google Workspace, Salesforce)
-    ├── Plugins (superpowers, episodic-memory, context7, github, + 18 more)
-    └── 10 Git repos (~/projects/personal/)
+    ├── Claude Code (Max subscription)
+    ├── Happy Coder (persistent systemd service — always-on phone relay)
+    ├── Zellij (session persistence, OSC 52 clipboard)
+    ├── Tailscale (encrypted P2P mesh)
+    ├── zsh + Starship (same prompt as MacBook)
+    ├── 1Password CLI (service account for MCP credentials)
+    └── 10 Git repos synced from GitHub
 
 Access paths:
-  MacBook → ssh cc           → Tailscale → Zellij → Claude Code
-  MacBook → ssh cc-raw       → Tailscale → plain shell
-  iPhone  → Happy Coder app  → relay → LXC
-  Browser → app.happy.engineering → relay → LXC
+  MacBook → ssh cc             → Tailscale → Zellij session
+  MacBook → ssh cc-raw         → Tailscale → plain shell
+  iPhone  → Happy Coder app    → relay → Claude Code
+  Browser → app.happy.engineering → relay → Claude Code
+
+Config sync (real-time via Syncthing over Tailscale):
+  ~/.claude-shared/
+  ├── CLAUDE.md, commands/, hooks/    → symlinked into ~/.claude/
+  ├── starship.toml                   → shared prompt config
+  ├── zshrc-shared.sh                 → shared shell config
+  └── bin/cc-dashboard, cc-cache-refresh  → dashboard scripts
 ```
 
-## Features
+## Best Practices
 
-- **Always-on Claude Code** — runs on a Proxmox LXC, survives reboots (`onboot: 1`)
-- **Session persistence** — Zellij keeps sessions alive across disconnects
-- **Multi-device access** — MacBook, iPhone, browser — all hit the same session
-- **One-command access** — `ssh cc` from MacBook drops straight into Zellij
-- **Happy Coder relay** — interact with Claude Code from your phone
-- **Tailscale networking** — encrypted P2P mesh, no port forwarding needed
-- **Idempotent scripts** — every script is safe to run multiple times
-- **Phased migration** — 8 independent phases, each with snapshots for rollback
+### Session Management
 
-## Prerequisites
+- **One session per project**: Use `cc-project my-api` to create named sessions. Don't pile everything into one session.
+- **Detach, don't exit**: Press `Alt-d` in Zellij to detach. The session stays alive. `exit` kills it.
+- **Name sessions meaningfully**: `cc-project career-os` is better than `cc-project test`.
 
-- [Proxmox VE](https://www.proxmox.com/) host with LXC support
-- [Tailscale](https://tailscale.com/) account with Tailscale installed on your devices
-- Claude [Max subscription](https://claude.ai/) (all usage goes through Max, not API tokens)
-- macOS with zsh (for MacBook thin-client setup)
+### Config and Secrets
 
-## Getting Started
+- **Never hardcode secrets** — use 1Password CLI (`op`) with service account tokens
+- **Edit shared config on either machine** — Syncthing syncs `~/.claude-shared/` bidirectionally
+- **Machine-specific config stays local** — `settings.json`, `settings.local.json`, MCP plugin paths differ per OS
 
-The setup is split into phases. Each phase has its own script and creates a Proxmox snapshot for easy rollback.
+### Project Tracking
 
-### Phase 1: Create the LXC Container
+- **Every project has a STATUS.md** — single source of truth for project health
+- **The `/status` skill** reads all STATUS.md files and renders a dashboard
+- **Update STATUS.md when you finish significant work** — it powers the welcome dashboard's suggestions
 
-Run **on the Proxmox host**:
+### When Things Break
 
-```bash
-bash scripts/setup-lxc.sh
-```
+- **Symlinks overwritten by Claude Code update?** Run `~/.claude-shared/restore-symlinks.sh`
+- **Zellij session frozen?** `zellij kill-session <name>` and start fresh
+- **Can't reach LXC?** Check Tailscale: `tailscale status` on both machines
+- **Full troubleshooting guide**: [docs/troubleshooting.md](docs/troubleshooting.md)
 
-This creates an unprivileged Ubuntu 24.04 LXC with:
-- 4 cores, 8 GB RAM, 32 GB disk
-- Tailscale TUN device pre-configured
-- Nesting enabled (for Docker compatibility)
-- Auto-start on boot
+## Daily Commands
 
-After success, snapshot:
+### From MacBook
 
-```bash
-pct snapshot 200 phase1-lxc-created
-```
-
-### Phase 6: Configure MacBook as Thin Client
-
-Run **on your MacBook**:
-
-```bash
-bash scripts/setup-macbook.sh
-```
-
-This installs SSH config and shell aliases for instant VPS access. See [Usage](#usage) for the full command reference.
-
-> Phases 2–5 and 7–8 are documented in [ROADMAP.md](ROADMAP.md) and will be added as the project progresses.
-
-## Usage
-
-After running `setup-macbook.sh` and sourcing your shell:
-
-```bash
-source ~/.zshrc
-```
-
-### Quick Commands
-
-| Command | Description |
+| Command | What it does |
 |---|---|
-| `cc` | SSH into default Zellij session on VPS |
-| `cc-sessions` | List all active Zellij sessions on VPS |
-| `cc-project <name>` | Attach/create a named project session |
-| `cc-claude [dir]` | Start Claude Code (optionally in a project dir) |
-| `cc-happy [dir]` | Start Happy Coder for phone relay |
+| `cc` | SSH into LXC, attach to Zellij session |
+| `cc-claude [dir]` | Run Claude Code on LXC in `~/projects/<dir>` |
+| `cc-sessions` | List Zellij sessions on LXC |
+| `cc-project <name>` | Attach/create a named Zellij session on LXC |
 
-### Examples
+### On the LXC
 
-```bash
-# Jump into your main session
-cc
+| Command | What it does |
+|---|---|
+| `claude` | Start Claude Code (auto-creates Zellij session) |
+| `sessions` | List Zellij + Happy Coder sessions |
 
-# Work on a specific project
-cc-project my-api
+### Zellij Shortcuts
 
-# Start Claude Code in a project
-cc-claude my-api
+| Key | Action |
+|---|---|
+| `Alt-d` | Detach from session (keeps it alive) |
+| `Ctrl-s` | Scroll mode (navigate output history) |
+| `Ctrl-p` | Pane management |
+| `Ctrl-t` | Tab management |
+| Select text | Auto-copied to clipboard (OSC 52) |
 
-# Start Happy Coder so you can continue from your phone
-cc-happy my-api
+### Dashboard
 
-# Check what's running
-cc-sessions
-```
+| Command | What it does |
+|---|---|
+| `cc-dashboard --welcome` | Quick welcome banner (runs on shell startup) |
+| `cc-dashboard --full` | Full dashboard with service health |
+| `cc-cache-refresh` | Force-refresh dashboard cache |
 
-### Session Lifecycle
+> Happy Coder runs as a persistent systemd service on the LXC — no manual start needed. Pair your phone once via `screen -r happy-relay` on the LXC to scan the QR code.
 
-1. Start a session from MacBook: `cc` or `cc-project myproject`
-2. Close the lid — session stays alive on the VPS
-3. Reopen and reconnect: same command, same session
-4. Switch to iPhone via Happy Coder — same Claude Code session
-5. Come back to MacBook — `cc` picks up right where you left off
+## Setup Guide
+
+The setup is split into 8 phases. Each phase has its own script and creates a Proxmox snapshot for rollback. See [ROADMAP.md](ROADMAP.md) for the full plan.
+
+| Phase | Script | Runs on | What it does |
+|---|---|---|---|
+| 1 | `scripts/setup-lxc.sh` | Proxmox host | Create LXC container |
+| 2 | `scripts/provision.sh` | LXC (as root) | Install Node.js, Tailscale, Zellij, git, gh |
+| 3 | `scripts/configure-user.sh` | LXC (as root) | Create user, zsh, Zellij config, shell aliases |
+| 4 | `scripts/install-claude.sh` | LXC (as robin) | Install Claude Code + Happy Coder, authenticate |
+| 5 | manual | LXC | Clone repos, sync config, set up MCP + 1Password |
+| 6 | `scripts/setup-macbook.sh` | MacBook | SSH config, shell aliases, welcome dashboard |
+| 7 | manual | — | iPhone access (Happy Coder app, Blink Shell) |
+| 8 | `tests/verify-setup.sh` | Both | Verification (13 MacBook checks, 39 LXC checks) |
 
 ## Project Structure
 
 ```
-cc-remote-workspace/
-├── README.md                  # This file
+claude-setup/
+├── README.md                  # This file — why and how
 ├── CLAUDE.md                  # Project context for Claude Code
-├── ROADMAP.md                 # Migration phases and task tracking
-├── LICENSE                    # MIT License
+├── ROADMAP.md                 # 8-phase migration plan
+├── STATUS.md                  # Project health (powers /status dashboard)
+├── LICENSE                    # MIT
 ├── scripts/
-│   ├── setup-lxc.sh           # Phase 1: Proxmox LXC creation (runs on host)
-│   ├── provision.sh           # Phase 2: Base packages, Node.js, Tailscale (runs in LXC)
-│   ├── configure-user.sh      # Phase 3: User, Zellij, shell config (runs in LXC)
-│   ├── install-claude.sh      # Phase 4: Claude Code + Happy Coder (runs in LXC)
-│   └── setup-macbook.sh       # Phase 6: MacBook thin-client setup (runs on Mac)
+│   ├── setup-lxc.sh           # Phase 1: LXC creation (Proxmox host)
+│   ├── provision.sh           # Phase 2: Base packages (LXC as root)
+│   ├── configure-user.sh      # Phase 3: User + shell config (LXC as root)
+│   ├── install-claude.sh      # Phase 4: Claude Code + Happy Coder (LXC)
+│   └── setup-macbook.sh       # Phase 6: MacBook thin-client (MacBook)
 ├── config/
-│   ├── ssh-config             # SSH config snippet for 'ssh cc' access
-│   ├── bashrc-additions.sh    # Shell aliases and auto-Zellij wrappers
-│   └── happy-coder.service    # Systemd user service for persistent Happy Coder
-└── docs/
-    └── quick-reference.md     # Daily commands, iPhone setup, troubleshooting
+│   ├── ssh-config             # SSH hosts for 'cc' and 'cc-raw'
+│   ├── zshrc-lxc.sh           # LXC .zshrc (CC_MACHINE=lxc, shared config)
+│   ├── bashrc-additions.sh    # Legacy bash config (replaced by zsh)
+│   └── happy-coder.service    # Systemd service for persistent Happy Coder
+├── docs/
+│   ├── quick-reference.md     # Daily cheat sheet
+│   └── troubleshooting.md     # Common issues and fixes
+└── tests/
+    └── verify-setup.sh        # Automated verification (MacBook + LXC)
 ```
-
-## Configuration
-
-### LXC Container (ID 200)
-
-| Setting | Value |
-|---|---|
-| Hostname | `claude-code` |
-| OS | Ubuntu 24.04 |
-| Cores | 4 |
-| Memory | 8192 MB |
-| Disk | 32 GB (local-lvm) |
-| Network | DHCP on vmbr0 |
-| Features | nesting=1, keyctl=1 |
-| TUN device | Mounted for Tailscale |
-| Auto-start | Yes |
-
-### SSH Hosts
-
-| Host | Purpose |
-|---|---|
-| `cc` | Auto-attaches to Zellij `main` session |
-| `cc-raw` | Plain SSH for scripting, scp, rsync |
-
-Both resolve `claude-code` via Tailscale DNS.
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for the full 8-phase migration plan:
-
-- [x] **Phase 1** — Create LXC container on Proxmox
-- [x] **Phase 2** — Provision base packages (Node.js 22, Tailscale, Zellij, gh)
-- [x] **Phase 3** — Create user and shell configuration
-- [x] **Phase 4** — Install Claude Code and Happy Coder
-- [x] **Phase 5** — Migrate Git repos, Claude config, MCP servers, 1Password
-- [x] **Phase 6** — Configure MacBook as thin client (SSH config, aliases, dashboard)
-- [x] **Phase 7** — Configure iPhone access (Happy Coder, Mosh, quick-reference docs)
-- [ ] **Phase 8** — Cutover and cleanup (verification script done, burn-in pending)
 
 ## License
 

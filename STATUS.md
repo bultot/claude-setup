@@ -1,4 +1,4 @@
-# CC Remote Workspace
+# Claude Setup
 
 **Status**: active
 **Last Updated**: 2026-02-09
@@ -32,13 +32,13 @@ Phase 8 complete: verification script passes (MacBook 13/13, LXC 39/39), trouble
 
 - [ ] 1-week burn-in: use VPS exclusively
 - [ ] Pair Happy Coder on iPhone (scan QR from `screen -r happy-relay`)
-- [ ] Install zsh + Starship on LXC (optional upgrade from bash)
+- [x] Install zsh + Starship + eza on LXC (matching MacBook shell experience)
 - [ ] Test MCP servers end-to-end on LXC (need `op signin` on LXC first)
 - [ ] Authenticate Salesforce CLI on LXC (`sf auth`)
 
 ## Blockers
 
-None — ready to continue with LXC zsh deployment and verification.
+None — ready for burn-in.
 
 ## Notes
 

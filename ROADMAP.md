@@ -1,4 +1,4 @@
-# CC Remote Workspace — Migration Roadmap
+# Claude Setup — Migration Roadmap
 
 ## Development Workflow
 

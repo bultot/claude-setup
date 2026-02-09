@@ -41,7 +41,7 @@ info "Setting up user '${USERNAME}'..."
 if id "${USERNAME}" &>/dev/null; then
     ok "User '${USERNAME}' already exists"
 else
-    useradd -m -s /bin/bash "${USERNAME}"
+    useradd -m -s /usr/bin/zsh "${USERNAME}"
     ok "User '${USERNAME}' created"
 fi
 
@@ -73,7 +73,7 @@ mkdir -p "${ZELLIJ_DIR}" "${LAYOUT_DIR}"
 
 # Embed Zellij config directly (self-contained when piped via SSH)
 cat > "${ZELLIJ_DIR}/config.kdl" << 'ZELLIJ_EOF'
-// Zellij config — Claude Code VPS (catppuccin-mocha theme, OSC 52 clipboard)
+// Zellij config — Claude Code VPS (catppuccin-mocha, OSC 52, zsh)
 
 copy_on_select true
 copy_clipboard "system"
@@ -83,7 +83,7 @@ simplified_ui true
 theme "catppuccin-mocha"
 session_serialization true
 pane_frames true
-default_shell "bash"
+default_shell "zsh"
 
 keybinds {
     unbind "Ctrl h"
@@ -100,8 +100,8 @@ ZELLIJ_EOF
 # Claude Code layout — auto-starts Claude with --dangerously-skip-permissions
 cat > "${LAYOUT_DIR}/claude.kdl" << 'LAYOUT_EOF'
 layout {
-    pane command="bash" {
-        args "-ic" "command claude --dangerously-skip-permissions; exec bash"
+    pane command="zsh" {
+        args "-ic" "command claude --dangerously-skip-permissions; exec zsh"
     }
 }
 LAYOUT_EOF
@@ -109,8 +109,8 @@ LAYOUT_EOF
 # Happy Coder layout — auto-starts Happy Coder
 cat > "${LAYOUT_DIR}/happy.kdl" << 'LAYOUT_EOF'
 layout {
-    pane command="bash" {
-        args "-ic" "command happy; exec bash"
+    pane command="zsh" {
+        args "-ic" "command happy; exec zsh"
     }
 }
 LAYOUT_EOF
@@ -240,7 +240,7 @@ echo "  LXC 200 — User Configuration Complete"
 echo "============================================================"
 echo ""
 echo "  User:       ${USERNAME} (sudo, passwordless)"
-echo "  Shell:      /bin/bash"
+echo "  Shell:      /usr/bin/zsh"
 echo "  Zellij:     ~/.config/zellij/config.kdl (catppuccin-mocha, OSC 52)"
 echo "  Layouts:    claude.kdl, happy.kdl"
 echo "  Aliases:    claude, happy, sessions, ll, la"

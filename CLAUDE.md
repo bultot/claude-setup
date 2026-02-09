@@ -1,8 +1,8 @@
-# CC Remote Workspace
+# Claude Setup
 
 ## Project Overview
 
-This project sets up a persistent Claude Code environment on a Proxmox LXC container, accessible from any device (MacBook, iPhone, browser) via Happy Coder and SSH/Zellij over Tailscale. The goal is to completely decouple Claude Code from the MacBook, making it an always-on service on the home server.
+This project documents and automates my personal Claude Code setup: an always-on environment running on a Proxmox LXC container, accessible from MacBook, iPhone, or browser via SSH/Zellij and Happy Coder over Tailscale. The goal is session persistence across devices — start work on the MacBook, continue on the phone, never lose a session.
 
 ## Owner
 
@@ -54,7 +54,7 @@ Shared config (synced via Syncthing):
 ## Project Structure
 
 ```
-cc-remote-workspace/
+claude-setup/
 ├── CLAUDE.md                 # This file — project context for Claude Code
 ├── ROADMAP.md                # Migration phases and task tracking
 ├── STATUS.md                 # Project status (powers /status dashboard)
@@ -95,7 +95,7 @@ cc-remote-workspace/
 - LXC must have `nesting=1,keyctl=1` features enabled for Docker compatibility and Tailscale
 - `/dev/net/tun` must be mounted for Tailscale to work inside LXC
 - Claude Code must authenticate with Max subscription (not API key)
-- Happy Coder wraps `claude` — use `happy` command instead of `claude` for sessions that need mobile access
+- Happy Coder runs as a persistent systemd service — no manual start needed, phone connects automatically
 - MCP servers that depend on macOS-local resources cannot be migrated — flag these during migration
 - The LXC should auto-start on Proxmox boot (`onboot: 1`)
 - Zellij sessions persist across SSH disconnects — use `zellij attach --create` for reconnection
@@ -116,15 +116,15 @@ When Robin plans features or tasks in Claude Desktop/iOS chat:
 ssh cc                          # Jump into default Zellij session on VPS
 cc-sessions                     # List all running Zellij sessions
 cc-project <name>               # Jump into specific project session
-cc-claude [dir]                 # Start Claude Code in project
-cc-happy [dir]                  # Start Happy Coder (phone relay)
+cc-claude [dir]                 # Start Claude Code in project on LXC
+cc-sessions                     # List Zellij sessions on LXC
 
-# On VPS
-happy                           # Start Claude Code with Happy Coder relay
-claude                          # Start Claude Code in Zellij (auto-wrapped)
+# On LXC
+claude                          # Start Claude Code (auto-creates Zellij session)
 sessions                        # Show all Zellij + Happy sessions
-zellij list-sessions            # List Zellij sessions
-zellij attach <name>            # Attach to specific session
+
+# Happy Coder runs as a persistent systemd service (always-on)
+# Pair phone: screen -r happy-relay (view QR), Ctrl-A D (detach)
 
 # Dashboard
 cc-dashboard --welcome          # Quick welcome banner (used by .zshrc)

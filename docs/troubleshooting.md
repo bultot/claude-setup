@@ -153,7 +153,7 @@ ssh cc-raw "npm install -g @anthropic-ai/claude-code"
 ssh cc-raw "journalctl --user -u happy-coder --no-pager -n 50"
 
 # Reinstall service
-ssh cc-raw "cp ~/projects/personal/cc-remote-workspace/config/happy-coder.service ~/.config/systemd/user/"
+ssh cc-raw "cp ~/projects/personal/claude-setup/config/happy-coder.service ~/.config/systemd/user/"
 ssh cc-raw "systemctl --user daemon-reload"
 ssh cc-raw "systemctl --user enable --now happy-coder"
 ```
