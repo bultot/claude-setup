@@ -64,9 +64,10 @@ Create `scripts/provision.sh` that installs all required packages inside the LXC
 
 ### Requirements
 Install in order:
-1. System packages: curl, wget, git, tmux, mosh, htop, build-essential, python3, python3-pip, unzip, jq, openssh-server
+1. System packages: curl, wget, git, mosh, htop, build-essential, python3, python3-pip, unzip, jq, openssh-server
 2. Node.js 22.x (via NodeSource)
-3. Tailscale
+3. Zellij (from GitHub releases)
+4. Tailscale
 
 ### Implementation Steps
 1. Update and upgrade system packages
@@ -81,7 +82,7 @@ Install in order:
 - [ ] `node --version` returns v22.x
 - [ ] `npm --version` returns current
 - [ ] `git --version` works
-- [ ] `tmux -V` works
+- [ ] `zellij --version` works
 - [ ] `tailscale status` shows connected
 - [ ] Container is reachable via Tailscale hostname from MacBook
 
@@ -100,36 +101,37 @@ Install in order:
 Create `scripts/configure-user.sh` and config files for the robin user account.
 
 ### Requirements
-- Create user `robin` with sudo access and bash shell
-- Install tmux configuration optimized for mobile use
-- Install bash aliases and auto-tmux wrappers
+- Create user `robin` with sudo access
+- Install Zellij configuration (catppuccin-mocha theme, OSC 52 clipboard)
+- Install shell aliases and auto-Zellij wrappers
 - Generate SSH key for GitHub access
 
 ### Implementation Steps
 
 1. Create user `robin` with home directory and sudo access
-2. Create `config/tmux.conf` with:
-   - Mouse support enabled
-   - 50000 line scrollback
-   - screen-256color terminal
-   - Window/pane numbering from 1
-   - Mobile-friendly: PageUp and F1 bound to copy mode (no prefix)
-   - Status bar with hostname and time
-   - No auto-rename windows
-3. Create `config/bashrc-additions.sh` with:
-   - `claude()` function that auto-wraps in tmux (session name: claude-DIRNAME)
-   - `happy()` function that auto-wraps in tmux (session name: happy-DIRNAME)
-   - `sessions()` function to show all tmux and happy sessions
+2. Install Zellij config at `~robin/.config/zellij/config.kdl` with:
+   - catppuccin-mocha theme
+   - OSC 52 clipboard (`copy_on_select true`, `copy_clipboard "system"`)
+   - 50000 line scroll buffer
+   - Mouse mode enabled
+   - Session serialization for persistence
+   - Keybinds: Alt-d detach, Alt-n new pane, Alt-1/2/3 tab switch
+3. Create Zellij layouts for Claude and Happy Coder:
+   - `~robin/.config/zellij/layouts/claude.kdl` — runs `claude --dangerously-skip-permissions`
+   - `~robin/.config/zellij/layouts/happy.kdl` — runs `happy`
+4. Create `config/bashrc-additions.sh` with:
+   - `claude()` function that auto-wraps in Zellij (session name: claude-DIRNAME)
+   - `happy()` function that auto-wraps in Zellij (session name: happy-DIRNAME)
+   - `sessions()` function to show all Zellij and Happy Coder sessions
    - Useful aliases (ll, la, etc.)
-4. Install tmux.conf to `~robin/.tmux.conf`
 5. Append bashrc-additions to `~robin/.bashrc`
 6. Generate ed25519 SSH key for robin
 7. Print public key so Robin can add it to GitHub
 
 ### Verification
 - [ ] Can `su - robin` and get bash shell
-- [ ] `tmux new -s test` works with mouse scrolling
-- [ ] Running `claude` outside tmux auto-creates tmux session
+- [ ] `zellij` starts and theme is catppuccin-mocha
+- [ ] Running `claude` outside Zellij auto-creates Zellij session
 - [ ] Running `sessions` shows output
 - [ ] SSH key exists at `~robin/.ssh/id_ed25519.pub`
 
@@ -251,21 +253,21 @@ Create `scripts/setup-macbook.sh` and `config/ssh-config` for the MacBook side.
      HostName claude-code
      User robin
      RequestTTY yes
-     RemoteCommand tmux new-session -A -s main
+     RemoteCommand zellij attach --create main
    ```
 2. Create `scripts/setup-macbook.sh` that:
    - Appends SSH config to `~/.ssh/config` (with backup)
    - Adds aliases to `~/.zshrc`:
      - `cc` → ssh cc
      - `cc-sessions` → list remote sessions
-     - `cc-project <name>` → jump into project tmux session
+     - `cc-project <name>` → jump into project Zellij session
    - Prints instructions to install Happy Coder Mac app from App Store
    - Prints instructions to pair Happy Coder with VPS
 
 3. Create `docs/quick-reference.md` cheat sheet
 
 ### Verification
-- [x] `ssh cc` from MacBook drops into tmux session on VPS
+- [x] `ssh cc` from MacBook drops into Zellij session on VPS
 - [x] `cc-sessions` lists active sessions
 - [x] `cc-project` function works for named projects
 - [ ] Happy Coder Mac app paired and shows sessions (user action — App Store install)
@@ -295,7 +297,7 @@ Document and verify iPhone access via Happy Coder and Blink Shell.
 2. Blink Shell backup setup:
    - Install Blink Shell from App Store
    - Add Tailscale host configuration
-   - Set up Mosh connection: `mosh robin@claude-code -- tmux attach -t main`
+   - Set up Mosh connection: `mosh robin@claude-code -- zellij attach --create main`
    - Test reconnection after network switch (WiFi → cellular)
 
 ### Verification
@@ -309,7 +311,8 @@ Document and verify iPhone access via Happy Coder and Blink Shell.
 
 ## Phase 8: Cutover and Cleanup
 
-**Status**: [ ] Not started
+**Status**: [~] In progress (2026-02-09)
+**Snapshot**: pending (after burn-in)
 
 ### Task
 Create `tests/verify-setup.sh` that validates the complete setup, and document the cutover process.
@@ -323,13 +326,13 @@ Create `tests/verify-setup.sh` that validates the complete setup, and document t
    - Happy Coder is running
    - All repos accessible
    - MCP servers functional
-   - tmux sessions persist across SSH disconnects
+   - Zellij sessions persist across SSH disconnects
    - `ssh cc` works from MacBook
    - Happy Coder paired on Mac and iPhone
 
 2. Create `docs/troubleshooting.md` covering:
    - Tailscale connection drops
-   - tmux session recovery
+   - Zellij session recovery
    - Claude Code authentication expiry
    - Happy Coder reconnection
    - LXC resource issues
@@ -342,8 +345,9 @@ Create `tests/verify-setup.sh` that validates the complete setup, and document t
    - Final snapshot: `pct snapshot 200 production-ready`
 
 ### Verification
-- [ ] `tests/verify-setup.sh` passes all checks
-- [ ] Troubleshooting doc covers known failure modes
+- [x] `tests/verify-setup.sh` passes all checks (MacBook: 13/13, LXC: 34/34 + 4 warnings)
+- [x] Troubleshooting doc covers known failure modes (`docs/troubleshooting.md`)
+- [ ] Deploy pending changes to LXC (CC_MACHINE, PATH, Happy Coder service)
 - [ ] 1 week burn-in completed without issues
 - [ ] MacBook is truly optional — all work happens on VPS
 - [ ] Phone access works reliably for check-ins and approvals

@@ -9,8 +9,9 @@ set -euo pipefail
 #
 #   What it does:
 #     1. Appends SSH config for instant 'ssh cc' access (with backup)
-#     2. Adds shell aliases/functions to ~/.zshrc
-#     3. Prints Happy Coder setup instructions
+#     2. Adds shell aliases/functions to ~/.zshrc (sources shared config)
+#     3. Sets up Starship config symlink
+#     4. Prints Happy Coder setup instructions
 #
 #   Idempotent: safe to run multiple times — skips already-installed sections.
 # =============================================================================
@@ -88,49 +89,24 @@ else
 
 # --- CC Remote Workspace ---
 
-# Welcome banner (shows once per shell)
-() {
-    echo ""
-    echo "\033[1;36m  ╔════════════════════════════════════════════════╗"
-    echo "  ║          \033[1;37mClaude Code Remote Workspace\033[1;36m          ║"
-    echo "  ╚════════════════════════════════════════════════╝\033[0m"
-    echo ""
-    echo "  \033[1;33mRemote Sessions\033[0m  (LXC 200 via Tailscale)"
-    echo "    cc                SSH → Zellij main session"
-    echo "    cc-sessions       List remote sessions"
-    echo "    cc-project \033[2m<name>\033[0m  Named project session"
-    echo "    cc-claude \033[2m[dir]\033[0m    Claude Code in project"
-    echo "    cc-happy \033[2m[dir]\033[0m     Happy Coder for phone relay"
-    echo ""
-    echo "  \033[1;33mZellij Shortcuts\033[0m"
-    echo "    Ctrl-p            Pane mode (split, move, resize)"
-    echo "    Ctrl-t            Tab mode (new, rename, switch)"
-    echo "    Ctrl-s            Scroll / search mode"
-    echo "    Ctrl-o            Session manager"
-    echo "    Ctrl-q            Quit (session stays alive)"
-    echo "    Alt-n             New pane    Alt-d  Detach"
-    echo "    Alt-1/2/3         Switch tabs"
-    echo ""
-}
+# Source shared shell config (history, completion, Starship, aliases, wrappers, dashboard)
+# Synced via Syncthing between MacBook and LXC
+if [ -f "$HOME/.claude-shared/zshrc-shared.sh" ]; then
+    source "$HOME/.claude-shared/zshrc-shared.sh"
+fi
 
-# Jump into default Zellij session on VPS
+# MacBook-specific: Remote session management (LXC 200 via Tailscale)
 alias cc="ssh cc"
 
-# List all Zellij sessions on the VPS
 cc-sessions() {
     ssh cc-raw "zellij list-sessions 2>/dev/null" || echo "No active sessions (or VPS unreachable)"
 }
 
-# Jump into a project-specific Zellij session on the VPS
-# Usage: cc-project myproject
 cc-project() {
     local name="${1:?Usage: cc-project <session-name>}"
     ssh -t cc-raw "zellij attach --create ${name}"
 }
 
-# Start a Claude Code session in a named Zellij session on the VPS
-# Uses the claude() wrapper on the LXC which auto-creates the Zellij session
-# Usage: cc-claude [project-dir]
 cc-claude() {
     local dir="${1:-}"
     if [[ -n "${dir}" ]]; then
@@ -140,9 +116,6 @@ cc-claude() {
     fi
 }
 
-# Start a Happy Coder session on the VPS (for phone relay)
-# Uses the happy() wrapper on the LXC which auto-creates the Zellij session
-# Usage: cc-happy [project-dir]
 cc-happy() {
     local dir="${1:-}"
     if [[ -n "${dir}" ]]; then
@@ -159,7 +132,30 @@ ALIASES
 fi
 
 # =============================================================================
-# Step 3: Summary & Happy Coder Instructions
+# Step 3: Starship Config Symlink
+# =============================================================================
+
+info "Setting up Starship config symlink..."
+
+STARSHIP_SOURCE="${HOME}/.claude-shared/starship.toml"
+STARSHIP_LINK="${HOME}/.config/starship.toml"
+
+if [[ -L "${STARSHIP_LINK}" ]]; then
+    ok "Starship config already symlinked"
+elif [[ -f "${STARSHIP_SOURCE}" ]]; then
+    mkdir -p "${HOME}/.config"
+    if [[ -f "${STARSHIP_LINK}" ]]; then
+        cp "${STARSHIP_LINK}" "${STARSHIP_LINK}.bak.$(date +%Y%m%d%H%M%S)"
+        rm -f "${STARSHIP_LINK}"
+    fi
+    ln -s "${STARSHIP_SOURCE}" "${STARSHIP_LINK}"
+    ok "Starship config symlinked to shared config"
+else
+    warn "Starship shared config not found at ${STARSHIP_SOURCE} — skipping"
+fi
+
+# =============================================================================
+# Step 4: Summary & Happy Coder Instructions
 # =============================================================================
 
 echo ""
@@ -169,15 +165,15 @@ echo "============================================================"
 echo ""
 echo "  Available commands (after: source ~/.zshrc):"
 echo ""
-echo "    cc                    SSH into VPS tmux session"
-echo "    cc-sessions           List active tmux sessions on VPS"
+echo "    cc                    SSH into VPS Zellij session"
+echo "    cc-sessions           List active Zellij sessions on VPS"
 echo "    cc-project <name>     Jump into named project session"
 echo "    cc-claude [dir]       Start Claude Code on VPS"
 echo "    cc-happy [dir]        Start Happy Coder on VPS"
 echo ""
 echo "  Prerequisites:"
 echo "    - Tailscale running on MacBook (VPS reachable as '${VPS_HOST}')"
-echo "    - Phase 2+ completed on VPS (user '${VPS_USER}' exists, tmux installed)"
+echo "    - Zellij + Claude Code installed on VPS"
 echo "    - SSH key added to VPS (or Tailscale SSH enabled)"
 echo ""
 echo "------------------------------------------------------------"
@@ -204,6 +200,6 @@ echo "  Run these to verify (after sourcing ~/.zshrc):"
 echo ""
 echo "    source ~/.zshrc"
 echo "    cc-sessions           # should list sessions (or say none)"
-echo "    cc                    # should drop into tmux on VPS"
+echo "    cc                    # should drop into Zellij on VPS"
 echo ""
 echo "============================================================"

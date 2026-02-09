@@ -11,7 +11,7 @@ set -euo pipefail
 #
 #   What it does:
 #     1. Updates system packages
-#     2. Installs base tools (git, tmux, mosh, htop, etc.)
+#     2. Installs base tools (git, mosh, htop, etc.) + Zellij
 #     3. Installs Node.js 22.x via NodeSource
 #     4. Installs Tailscale and starts it with SSH enabled
 #
@@ -46,7 +46,6 @@ BASE_PACKAGES=(
     curl
     wget
     git
-    tmux
     mosh
     htop
     build-essential
@@ -63,7 +62,28 @@ BASE_PACKAGES=(
 apt-get install -y -qq "${BASE_PACKAGES[@]}"
 ok "Base packages installed"
 
-# --- Step 3: Node.js 22.x via NodeSource ------------------------------------
+# --- Step 3a: Zellij (terminal multiplexer) ----------------------------------
+
+info "Checking Zellij installation..."
+
+if command -v zellij &>/dev/null; then
+    ok "Zellij already installed: $(zellij --version)"
+else
+    info "Installing Zellij from GitHub releases..."
+    ZELLIJ_VERSION="v0.43.1"
+    ARCH=$(dpkg --print-architecture)
+    case "$ARCH" in
+        amd64) ZELLIJ_ARCH="x86_64" ;;
+        arm64) ZELLIJ_ARCH="aarch64" ;;
+        *) fail "Unsupported architecture: $ARCH" ;;
+    esac
+    curl -fsSL "https://github.com/zellij-org/zellij/releases/download/${ZELLIJ_VERSION}/zellij-${ZELLIJ_ARCH}-unknown-linux-musl.tar.gz" \
+        | tar xz -C /usr/local/bin
+    chmod +x /usr/local/bin/zellij
+    ok "Zellij $(zellij --version) installed"
+fi
+
+# --- Step 3b: Node.js 22.x via NodeSource -----------------------------------
 
 info "Checking Node.js installation..."
 
@@ -134,7 +154,7 @@ echo "  System packages:  installed"
 echo "  Node.js:          $(node --version)"
 echo "  npm:              $(npm --version)"
 echo "  git:              $(git --version)"
-echo "  tmux:             $(tmux -V)"
+echo "  Zellij:           $(zellij --version)"
 echo "  Tailscale IP:     ${TS_IP}"
 echo "  Tailscale host:   ${TS_HOSTNAME}"
 echo ""

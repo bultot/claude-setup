@@ -1,0 +1,40 @@
+# =============================================================================
+# happy-coder.service — Persistent Happy Coder relay for phone/web access
+# =============================================================================
+# Runs Happy Coder in a detached screen session. Once paired, phone/web
+# access stays active until the LXC reboots.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp happy-coder.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now happy-coder
+#   sudo loginctl enable-linger robin   # keep service running when not logged in
+#
+# First-time pairing (view QR code):
+#   screen -r happy-relay              # attach to see QR code
+#   # Scan with Happy Coder app
+#   # Ctrl-A D to detach (session stays alive)
+#
+# After LXC reboot:
+#   screen -r happy-relay              # view new QR code, re-pair
+# =============================================================================
+
+[Unit]
+Description=Happy Coder — Claude Code session relay for phone/web
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+# screen -dmS creates a detached session with a proper PTY
+ExecStart=/usr/bin/screen -dmS happy-relay /usr/bin/happy
+ExecStop=/usr/bin/screen -S happy-relay -X quit
+Restart=on-failure
+RestartSec=15
+Environment=HOME=%h
+Environment=TERM=xterm-256color
+WorkingDirectory=%h
+
+[Install]
+WantedBy=default.target

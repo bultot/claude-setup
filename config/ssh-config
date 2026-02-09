@@ -4,8 +4,8 @@
 # Append this to ~/.ssh/config (or run scripts/setup-macbook.sh)
 #
 # Usage:
-#   ssh cc              → drops into default tmux session on VPS
-#   ssh cc-raw          → plain SSH (no tmux, for scp/rsync/scripting)
+#   ssh cc              → drops into default Zellij session on VPS
+#   ssh cc-raw          → plain SSH (no Zellij, for scp/rsync/scripting)
 # =============================================================================
 
 # --- Claude Code VPS (via Tailscale) ----------------------------------------

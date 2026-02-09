@@ -58,26 +58,33 @@ Happy Coder lets you interact with Claude Code sessions from your phone through 
 1. Install **Happy Coder** from the App Store:
    https://apps.apple.com/app/happy-coder/id6748571505
 
-### Pair with LXC
+### Persistent Relay (auto-starts on boot)
 
-2. From your MacBook, start Happy Coder on the LXC:
-   ```bash
-   cc-happy
-   ```
-   Or SSH in directly:
-   ```bash
-   ssh -t cc-raw "happy"
-   ```
+Happy Coder runs as a systemd user service on the LXC, so it's always available:
 
-3. A QR code appears in the terminal. Scan it with the Happy Coder app on your iPhone.
+```bash
+# Check service status
+ssh cc-raw "systemctl --user status happy-coder"
 
-4. Once paired, active sessions appear in the app. You can send messages to Claude Code and see responses.
+# View QR code for initial pairing (or after LXC reboot)
+ssh -t cc-raw "screen -r happy-relay"
+# Scan QR code with phone, then Ctrl-A D to detach
+```
+
+The relay runs in a persistent screen session (`happy-relay`). Once paired, your phone stays connected — no re-scanning needed unless the LXC reboots.
+
+### Manual Sessions (per-project)
+
+You can also start project-specific Happy Coder sessions:
+```bash
+cc-happy my-api        # from MacBook
+```
 
 ### Daily Use
 
-- Open Happy Coder on iPhone — active sessions show automatically
+- Open Happy Coder on iPhone — the always-on relay shows automatically
 - Tap a session to interact with Claude Code
-- Start new sessions from the app or from MacBook (`cc-happy <project>`)
+- Start per-project sessions from MacBook (`cc-happy <project>`) for focused work
 - Sessions persist even when the app is closed
 
 ### Web Access (from any browser)

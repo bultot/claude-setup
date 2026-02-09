@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# configure-user.sh — Create robin user, shell config, tmux, aliases
+# configure-user.sh — Create robin user, shell config, Zellij, aliases
 # =============================================================================
 #
 #   THIS SCRIPT RUNS INSIDE LXC 200 (as root)
@@ -11,8 +11,8 @@ set -euo pipefail
 #
 #   What it does:
 #     1. Creates user 'robin' with sudo access
-#     2. Installs tmux.conf (mobile-friendly)
-#     3. Installs bash aliases and auto-tmux wrappers
+#     2. Installs Zellij config + layouts (catppuccin-mocha, OSC 52 clipboard)
+#     3. Installs bash aliases and auto-Zellij wrappers
 #     4. Generates SSH key for GitHub
 #
 #   Idempotent: safe to run multiple times.
@@ -63,96 +63,64 @@ else
     ok "Sudoers file already exists"
 fi
 
-# --- Step 2: Install tmux.conf -----------------------------------------------
+# --- Step 2: Install Zellij config + layouts ---------------------------------
 
-info "Installing tmux configuration..."
+info "Installing Zellij configuration..."
 
-# Embed tmux.conf directly (so this script is self-contained when piped via SSH)
-cat > "${HOME_DIR}/.tmux.conf" << 'TMUX_EOF'
-# =============================================================================
-# tmux.conf — Mobile-friendly tmux config for Claude Code VPS
-# =============================================================================
+ZELLIJ_DIR="${HOME_DIR}/.config/zellij"
+LAYOUT_DIR="${ZELLIJ_DIR}/layouts"
+mkdir -p "${ZELLIJ_DIR}" "${LAYOUT_DIR}"
 
-# --- General settings --------------------------------------------------------
+# Embed Zellij config directly (self-contained when piped via SSH)
+cat > "${ZELLIJ_DIR}/config.kdl" << 'ZELLIJ_EOF'
+// Zellij config — Claude Code VPS (catppuccin-mocha theme, OSC 52 clipboard)
 
-# 256-color terminal
-set -g default-terminal "screen-256color"
-set -ga terminal-overrides ",xterm-256color:Tc"
+copy_on_select true
+copy_clipboard "system"
+scroll_buffer_size 50000
+mouse_mode true
+simplified_ui true
+theme "catppuccin-mocha"
+session_serialization true
+pane_frames true
+default_shell "bash"
 
-# Large scrollback for long Claude Code outputs
-set -g history-limit 50000
+keybinds {
+    unbind "Ctrl h"
+    shared_except "locked" {
+        bind "Alt d" { Detach; }
+        bind "Alt n" { NewPane; }
+        bind "Alt 1" { GoToTab 1; }
+        bind "Alt 2" { GoToTab 2; }
+        bind "Alt 3" { GoToTab 3; }
+    }
+}
+ZELLIJ_EOF
 
-# Window/pane numbering from 1 (easier to reach on keyboard)
-set -g base-index 1
-setw -g pane-base-index 1
+# Claude Code layout — auto-starts Claude with --dangerously-skip-permissions
+cat > "${LAYOUT_DIR}/claude.kdl" << 'LAYOUT_EOF'
+layout {
+    pane command="bash" {
+        args "-ic" "command claude --dangerously-skip-permissions; exec bash"
+    }
+}
+LAYOUT_EOF
 
-# Renumber windows when one is closed
-set -g renumber-windows on
+# Happy Coder layout — auto-starts Happy Coder
+cat > "${LAYOUT_DIR}/happy.kdl" << 'LAYOUT_EOF'
+layout {
+    pane command="bash" {
+        args "-ic" "command happy; exec bash"
+    }
+}
+LAYOUT_EOF
 
-# Don't auto-rename windows (keep meaningful names)
-setw -g automatic-rename off
-set -g allow-rename off
-
-# Faster escape time (better for vim/editors)
-set -sg escape-time 10
-
-# Enable focus events (useful for editors)
-set -g focus-events on
-
-# --- Mouse support (critical for mobile) ------------------------------------
-
-set -g mouse on
-
-# --- Mobile-friendly copy mode -----------------------------------------------
-
-# Enter copy mode without prefix key — PageUp and F1
-bind -n PageUp copy-mode -u
-bind -n F1 copy-mode
-
-# Vi-style keys in copy mode
-setw -g mode-keys vi
-
-# --- Status bar --------------------------------------------------------------
-
-set -g status-position bottom
-set -g status-interval 10
-
-set -g status-style "bg=colour235,fg=colour248"
-
-set -g status-left-length 30
-set -g status-left "#[fg=colour39,bold] #h #[fg=colour245]│ "
-
-set -g status-right-length 40
-set -g status-right "#[fg=colour245]│ #[fg=colour248]%H:%M #[fg=colour245]│ #[fg=colour248]%d-%b"
-
-# Window status
-setw -g window-status-format " #I:#W "
-setw -g window-status-current-format "#[fg=colour39,bold] #I:#W "
-
-# --- Pane borders ------------------------------------------------------------
-
-set -g pane-border-style "fg=colour238"
-set -g pane-active-border-style "fg=colour39"
-
-# --- Quality of life ---------------------------------------------------------
-
-# Reload config with prefix-r
-bind r source-file ~/.tmux.conf \; display "Config reloaded"
-
-# Split panes with | and - (more intuitive)
-bind | split-window -h -c "#{pane_current_path}"
-bind - split-window -v -c "#{pane_current_path}"
-
-# New window in current path
-bind c new-window -c "#{pane_current_path}"
-TMUX_EOF
-
-chown "${USERNAME}:${USERNAME}" "${HOME_DIR}/.tmux.conf"
-ok "tmux.conf installed"
+chown -R "${USERNAME}:${USERNAME}" "${HOME_DIR}/.config"
+ok "Zellij config and layouts installed"
 
 # --- Step 3: Install bashrc additions ----------------------------------------
 
-info "Installing bash aliases and auto-tmux wrappers..."
+info "Installing bash aliases and auto-Zellij wrappers..."
 
 MARKER="# --- CC Remote Workspace additions ---"
 BASHRC="${HOME_DIR}/.bashrc"
@@ -164,51 +132,55 @@ else
 
 # --- CC Remote Workspace additions ---
 
-# claude() — Run Claude Code inside a tmux session (auto-creates if needed)
+# claude() — Run Claude Code inside a Zellij session (auto-creates if needed)
 claude() {
     local dir_name
     dir_name=$(basename "$PWD")
     local session_name="claude-${dir_name}"
 
-    if [ -n "$TMUX" ]; then
+    if [ -n "$ZELLIJ" ]; then
         command claude "$@"
     else
-        if tmux has-session -t "$session_name" 2>/dev/null; then
-            tmux attach-session -t "$session_name"
+        if zellij list-sessions 2>/dev/null | grep -q "^${session_name}"; then
+            zellij attach "$session_name"
         else
-            tmux new-session -d -s "$session_name" -c "$PWD"
-            tmux send-keys -t "$session_name" "command claude $*" Enter
-            tmux attach-session -t "$session_name"
+            if [ -f "$HOME/.config/zellij/layouts/claude.kdl" ]; then
+                zellij --session "$session_name" --new-session-with-layout "$HOME/.config/zellij/layouts/claude.kdl"
+            else
+                zellij attach --create "$session_name"
+            fi
         fi
     fi
 }
 
-# happy() — Run Happy Coder inside a tmux session (auto-creates if needed)
+# happy() — Run Happy Coder inside a Zellij session (auto-creates if needed)
 happy() {
     local dir_name
     dir_name=$(basename "$PWD")
     local session_name="happy-${dir_name}"
 
-    if [ -n "$TMUX" ]; then
+    if [ -n "$ZELLIJ" ]; then
         command happy "$@"
     else
-        if tmux has-session -t "$session_name" 2>/dev/null; then
-            tmux attach-session -t "$session_name"
+        if zellij list-sessions 2>/dev/null | grep -q "^${session_name}"; then
+            zellij attach "$session_name"
         else
-            tmux new-session -d -s "$session_name" -c "$PWD"
-            tmux send-keys -t "$session_name" "command happy $*" Enter
-            tmux attach-session -t "$session_name"
+            if [ -f "$HOME/.config/zellij/layouts/happy.kdl" ]; then
+                zellij --session "$session_name" --new-session-with-layout "$HOME/.config/zellij/layouts/happy.kdl"
+            else
+                zellij attach --create "$session_name"
+            fi
         fi
     fi
 }
 
-# sessions() — Show all tmux and happy sessions
+# sessions() — Show all Zellij and Happy Coder sessions
 sessions() {
-    echo "=== tmux sessions ==="
-    tmux list-sessions 2>/dev/null || echo "  (none)"
+    echo "=== Zellij sessions ==="
+    zellij list-sessions 2>/dev/null || echo "  (none)"
     echo ""
     echo "=== Happy Coder sessions ==="
-    happy sessions 2>/dev/null || echo "  (none or happy not installed)"
+    command happy sessions 2>/dev/null || echo "  (none or happy not installed)"
 }
 
 alias ll='ls -lah'
@@ -216,6 +188,15 @@ alias la='ls -A'
 alias l='ls -CF'
 alias ..='cd ..'
 alias ...='cd ../..'
+
+# --- Machine identity (used by cc-dashboard and Starship) ---
+export CC_MACHINE="lxc"
+export PATH="$HOME/.claude-shared/bin:$HOME/.local/bin:$PATH"
+
+# --- Welcome dashboard (shared with MacBook via Syncthing) ---
+if [[ $- == *i* ]] && [[ -x "$HOME/.claude-shared/bin/cc-dashboard" ]]; then
+    "$HOME/.claude-shared/bin/cc-dashboard" --welcome
+fi
 
 # --- End CC Remote Workspace additions ---
 BASHRC_EOF
@@ -260,7 +241,8 @@ echo "============================================================"
 echo ""
 echo "  User:       ${USERNAME} (sudo, passwordless)"
 echo "  Shell:      /bin/bash"
-echo "  tmux:       ~/.tmux.conf installed (mobile-friendly)"
+echo "  Zellij:     ~/.config/zellij/config.kdl (catppuccin-mocha, OSC 52)"
+echo "  Layouts:    claude.kdl, happy.kdl"
 echo "  Aliases:    claude, happy, sessions, ll, la"
 echo ""
 echo "  SSH public key (add to GitHub):"

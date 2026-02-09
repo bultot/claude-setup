@@ -1,35 +1,44 @@
 # CC Remote Workspace
 
 **Status**: active
-**Last Updated**: 2026-02-08
-**Progress**: 87% (7/8 phases complete)
+**Last Updated**: 2026-02-09
+**Progress**: 97% (Phase 8 — burn-in pending)
 
 ## Current Focus
 
-Migrating Claude Code to a dedicated Proxmox LXC container (LXC 200) so it runs as an always-on service accessible from any device.
+Phase 8 complete: verification script passes (MacBook 13/13, LXC 39/39), troubleshooting docs written, Happy Coder persistent service deployed and running. Ready for 1-week burn-in.
 
 ## Completed
 
 - [x] Phase 1: LXC 200 created (Ubuntu 24.04, 4c/8GB/32GB, TUN device)
-- [x] Phase 2: Node.js 22.22, Tailscale, tmux, git, gh CLI installed
-- [x] Phase 3: Robin user, tmux config, auto-tmux wrappers, SSH key for GitHub
+- [x] Phase 2: Node.js 22.22, Tailscale, Zellij, git, gh CLI installed
+- [x] Phase 3: Robin user, Zellij config, auto-Zellij wrappers, SSH key for GitHub
 - [x] Phase 4: Claude Code 2.1.37 + Happy Coder authenticated with Max
 - [x] Phase 5: 10 repos cloned, full Claude config synced, MCP servers with 1Password
 - [x] Phase 6: MacBook thin-client setup (SSH config, aliases, welcome banner, setup-macbook.sh)
 - [x] Phase 7: iPhone access documented (quick-reference.md, Mosh verified, Happy Coder/Blink Shell instructions)
 - [x] 1Password CC Shared Credentials vault with service account for LXC
 - [x] Syncthing real-time config sync (CLAUDE.md, commands/, hooks/) between MacBook and LXC
+- [x] Zellij replaces tmux for session persistence (OSC 52 clipboard, layouts for Claude/Happy)
+- [x] All tmux references cleaned from project (Zellij everywhere)
+- [x] VPS welcome message: same styled header as MacBook + contextual shortcuts
+- [x] Dashboard "suggested" section: shows progress, reason, focus, and pending items
+- [x] Happy Coder systemd service for persistent phone/web relay
+- [x] Shell harmonization: shared zshrc, Starship prompt with CC_MACHINE identity
+- [x] Rich welcome dashboard (cc-dashboard with welcome/full/compact modes, ANSI cache)
+- [x] Shared scripts: cc-cache-refresh for pre-rendered project status + usage stats
 
 ## Pending
 
-- [ ] Phase 8: Verification script, troubleshooting docs, 1-week burn-in
+- [ ] 1-week burn-in: use VPS exclusively
+- [ ] Pair Happy Coder on iPhone (scan QR from `screen -r happy-relay`)
+- [ ] Install zsh + Starship on LXC (optional upgrade from bash)
 - [ ] Test MCP servers end-to-end on LXC (need `op signin` on LXC first)
 - [ ] Authenticate Salesforce CLI on LXC (`sf auth`)
-- [ ] Install Happy Coder Mac app and pair with LXC
 
 ## Blockers
 
-None — ready to continue with Phase 8.
+None — ready to continue with LXC zsh deployment and verification.
 
 ## Notes
 
@@ -38,3 +47,6 @@ None — ready to continue with Phase 8.
 - `midi-controller-pbf4` repo not cloned (no git remote)
 - Thin pool space warning on Proxmox — consider snapshot rotation
 - Claude config sync uses symlinks (~/.claude/{CLAUDE.md,commands,hooks} → ~/.claude-shared/) with Syncthing
+- Starship config also symlinked: ~/.config/starship.toml → ~/.claude-shared/starship.toml
+- Dashboard cache at ~/.cache/cc-dashboard/ — auto-refreshes when stale (>30 min)
+- career-os project filtered from dashboard when on Backbase WiFi
