@@ -1,5 +1,7 @@
 # Claude Setup
 
+> **Archived**: This remote LXC setup was retired in Feb 2026 in favor of running Claude Code locally on MacBook with [remote sessions](https://docs.anthropic.com/en/docs/claude-code/remote-sessions) for multi-device access. The documentation below is kept as historical reference.
+
 > My personal way of working with Claude Code — always-on, multi-device, session-persistent.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -133,9 +135,10 @@ Config sync (real-time via Syncthing over Tailscale):
 | Command | What it does |
 |---|---|
 | `cc` | SSH into LXC, attach to Zellij session |
-| `cc-claude [dir]` | Run Claude Code on LXC in `~/projects/<dir>` |
+| `cc-claude [name]` | Run Claude Code on LXC (auto-finds project under `~/projects/`) |
+| `cc-happy [name]` | Happy Coder on LXC (auto-finds project under `~/projects/`) |
 | `cc-sessions` | List Zellij sessions on LXC |
-| `cc-project <name>` | Attach/create a named Zellij session on LXC |
+| `cc-project <name>` | Zellij session + cd to project on LXC |
 
 ### On the LXC
 

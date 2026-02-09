@@ -8,9 +8,9 @@
 |---------|-------------|
 | `cc` | SSH into default Zellij session on LXC |
 | `cc-sessions` | List all active Zellij sessions |
-| `cc-project <name>` | Attach or create a named project session |
-| `cc-claude [dir]` | Start Claude Code in a project directory |
-| `cc-happy [dir]` | Start Happy Coder for phone relay |
+| `cc-project <name>` | Zellij session + cd to project on LXC |
+| `cc-claude [name]` | Claude Code on LXC (auto-finds project under `~/projects/`) |
+| `cc-happy [name]` | Happy Coder on LXC (auto-finds project under `~/projects/`) |
 
 ## On the LXC (inside a session)
 

@@ -196,7 +196,7 @@ Create `scripts/migrate-repos.sh` and `scripts/migrate-config.sh` to transfer pr
 ### Implementation Steps
 
 #### 5a: Migrate repos
-1. Create `~/projects/` directory
+1. Create `~/projects/personal/` directory
 2. Prompt Robin for list of GitHub repos to clone (or read from a config file)
 3. Clone each repo via SSH
 4. Verify each clone succeeded
@@ -219,7 +219,7 @@ Create `scripts/migrate-repos.sh` and `scripts/migrate-config.sh` to transfer pr
 3. Prompt Robin to fill in actual values
 
 ### Verification
-- [ ] All repos cloned and accessible under `~/projects/`
+- [ ] All repos cloned and accessible under `~/projects/personal/`
 - [ ] `git pull` works in each repo (SSH auth working)
 - [ ] Claude settings present in `~/.claude/`
 - [ ] MCP servers categorized (API-based vs local-dependent)

@@ -102,15 +102,19 @@ cc-sessions() {
     ssh cc-raw "zellij list-sessions 2>/dev/null" || echo "No active sessions (or VPS unreachable)"
 }
 
+_cc-find-project() {
+    echo "dir=\$(find ~/projects -maxdepth 2 -type d -name '${1}' | head -1); [ -n \"\$dir\" ] && cd \"\$dir\""
+}
+
 cc-project() {
     local name="${1:?Usage: cc-project <session-name>}"
-    ssh -t cc-raw "zellij attach --create ${name}"
+    ssh -t cc-raw "$(_cc-find-project "${name}"); zellij attach --create ${name}"
 }
 
 cc-claude() {
     local dir="${1:-}"
     if [[ -n "${dir}" ]]; then
-        ssh -t cc-raw "cd ~/projects/${dir} && bash -ic 'claude'"
+        ssh -t cc-raw "$(_cc-find-project "${dir}") && bash -ic 'claude'"
     else
         ssh -t cc-raw "bash -ic 'claude'"
     fi
@@ -119,7 +123,7 @@ cc-claude() {
 cc-happy() {
     local dir="${1:-}"
     if [[ -n "${dir}" ]]; then
-        ssh -t cc-raw "cd ~/projects/${dir} && bash -ic 'happy'"
+        ssh -t cc-raw "$(_cc-find-project "${dir}") && bash -ic 'happy'"
     else
         ssh -t cc-raw "bash -ic 'happy'"
     fi
